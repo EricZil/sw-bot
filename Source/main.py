@@ -1,5 +1,5 @@
 import os, threading, json
-import db, api, helpers, home
+import db, helpers, api, home
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 

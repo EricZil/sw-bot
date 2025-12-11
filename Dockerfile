@@ -9,4 +9,4 @@ COPY . .
 
 EXPOSE 45100
 
-CMD ["python", "main.py"]
+CMD ["python", "Source/main.py"]
