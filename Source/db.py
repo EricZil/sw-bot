@@ -90,6 +90,22 @@ def save_message(ticket_id, sender_id, sender_name, sender_avatar, msg, from_sta
         cursor.close()
         db.close()
 
+def get_ticket(ticket_id):
+    db = get_db()
+    if not db:
+        return None
+
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT * FROM tickets WHERE id = %s", (ticket_id,))
+        return cursor.fetchone()
+    except Exception as  e:
+        print(f"couldnt get ticket: {e}")
+        return None
+    finally:
+        cursor.close()
+        db.close()
+
 def find_ticket(staff_thread):
     db = get_db()
     if not db:

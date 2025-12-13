@@ -275,3 +275,38 @@ def show_edit_modal(client, body, message_ts):
                 ]
             }
     )
+
+def show_unauthorized_close(client, body):
+    client.views_open(
+        trigger_id=body["trigger_id"],
+        view={
+            "title": {
+                "type": "plain_text",
+                "text": "Shipwrighter",
+                "emoji": True
+            },
+            "type": "modal",
+            "blocks": [
+                {
+                    "type": "divider"
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*You can't close this ticket* :("
+                    }
+                },
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "plain_text",
+                            "text": "Only shipwrights and the ticket owner can close tickets, Or this ticket is already closed",
+                            "emoji": True
+                        }
+                    ]
+                }
+            ]
+        }
+    )

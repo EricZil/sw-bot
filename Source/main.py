@@ -1,4 +1,4 @@
-import os, threading, json
+import os, threading, json, requests
 import db, helpers, api, home
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
@@ -84,7 +84,6 @@ def msg(event, client):
                     helpers.send_files(event, client, STAFF_CHANNEL, ticket["staffThreadTs"], BOT_TOKEN)
                 
                 try:
-                    import requests
                     port = os.getenv('PORT', '45100')
                     requests.post(f'http://localhost:{port}/ws/notify', json={'ticketId': ticket["id"]}, timeout=0.5)
                 except:
@@ -142,14 +141,21 @@ def msg(event, client):
                     blocks=[
                         {
                             "type": "section",
-                            "text": {"type": "mrkdwn", "text": "New ticket!"}
+                            "text": {"type": "mrkdwn", "text": "New ticket!"},
+                            "accessory": {
+                                "type": "button",
+                                "text": {"type": "plain_text", "text": "Resolve Ticket"},
+                                "style": "primary",
+                                "value": str(ticket_id),
+                                "action_id": "resolve_ticket"
+                            }
                         },
                         {
                             "type": "context",
                             "elements": [
                                 {"type": "mrkdwn", "text": f"#sw-{ticket_id} | <{dash_link}|view on dash>"}
                             ]
-                        }
+                        },
                     ]
                 )
                 
@@ -162,7 +168,14 @@ def msg(event, client):
                     blocks=[
                         {
                             "type": "section",
-                            "text": {"type": "mrkdwn", "text": "Hey there! We have received your question, and someone from Shipwrights Team will get back to you shortly!"}
+                            "text": {"type": "mrkdwn", "text": "Hey there! We have received your question, and someone from Shipwrights Team will get back to you shortly!"},
+                            "accessory": {
+                                "type": "button",
+                                "text": {"type": "plain_text", "text": "Resolve Ticket"},
+                                "style": "primary",
+                                "value": str(ticket_id),
+                                "action_id": "resolve_ticket"
+                            }
                         },
                         {
                             "type": "context",
@@ -198,11 +211,43 @@ def delete_message(ack, body, client, respond):
         respond("Attachments deleted")
 
 @slack_app.action("edit_message")
-def edit_message(ack, body, client, respond):
+def edit_message(ack, body, client):
     ack()
     payload = json.loads(body["actions"][0]["value"])
     message_ts = payload["ts"]
     helpers.show_edit_modal(client, body, message_ts)
+
+@slack_app.action("resolve_ticket")
+def resolve_ticket(ack, body, client, respond):
+    ack()
+    ticket_id = json.loads(body["actions"][0]["value"])
+    ticket = db.get_ticket(ticket_id)
+    user_id = body["user"]["id"]
+    if (user_id in db.get_shipwrights() or user_id == ticket["userId"]) and ticket["status"] == "open":
+        db.close_ticket(ticket_id)
+        client.chat_postMessage(
+            channel=STAFF_CHANNEL,
+            thread_ts=ticket["staffThreadTs"],
+            text= f"Hey! Would you look at that, This ticket was marked as resolved by <@{user_id}>!",
+        )
+        client.chat_postMessage(
+            channel=USER_CHANNEL,
+            thread_ts=ticket["userThreadTs"],
+            text=f"Hey! Would you look at that, This ticket was marked as resolved!",
+        )
+        client.reactions_add(
+            channel=STAFF_CHANNEL,
+            timestamp=ticket["staffThreadTs"],
+            name="checks-passed-octicon"
+        )
+        client.reactions_add(
+            channel=USER_CHANNEL,
+            timestamp=ticket["userThreadTs"],
+            name="checks-passed-octicon"
+        )
+    else:
+        helpers.show_unauthorized_close(client, body)
+
 
 @slack_app.view("edited_message")
 def edited_message(ack, client, view):
