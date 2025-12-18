@@ -142,6 +142,34 @@ def notify():
     return jsonify({'ok': True})
 
 
+@app.route('/bridge/staff-note', methods=['POST'])
+def staff_note():
+    ip = request.remote_addr
+    if not helpers.check_rate(ip):
+        return jsonify({'error': 'slow down'}), 429
+
+    data = request.json
+    staff_thread_ts = data.get('staffThreadTs')
+    staff_name = data.get('staffName')
+    staff_avatar = data.get('staffAvatar')
+    note = data.get('note')
+
+    if not staff_thread_ts or not staff_name or not note:
+        return jsonify({'error': 'missing shit'}), 400
+
+    try:
+        slack_client.chat_postMessage(
+            channel=STAFF_CHANNEL,
+            thread_ts=staff_thread_ts,
+            text=f"📝 Internal note added to this ticket: _{note}_",
+            username=f"{staff_name}",
+            icon_url=staff_avatar if staff_avatar else None
+        )
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/bridge/close-ticket', methods=['POST'])
 def close_ticket():
     ip = request.remote_addr
