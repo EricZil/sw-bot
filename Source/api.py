@@ -15,12 +15,12 @@ CORS(app, origins="*", supports_credentials=True)
 socketio = SocketIO(app, cors_allowed_origins="*", path='/ws/socket.io', async_mode='threading', engineio_logger=False, logger=False)
 
 
-@app.route('/health', methods=['GET'])
+@app.get('/health')
 def health():
     return jsonify({'ok': True, 'bot': 'alive'})
 
 
-@app.route('/bridge/send-reply', methods=['POST'])
+@app.post('/bridge/send-reply')
 def send_reply():
     ip = request.remote_addr
     if not helpers.check_rate(ip):
@@ -131,7 +131,7 @@ def send_reply():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/ws/notify', methods=['POST'])
+@app.post('/ws/notify')
 def notify():
     data = request.json
     ticket_id = data.get('ticketId')
@@ -142,7 +142,7 @@ def notify():
     return jsonify({'ok': True})
 
 
-@app.route('/bridge/staff-note', methods=['POST'])
+@app.post('/bridge/staff-note')
 def staff_note():
     ip = request.remote_addr
     if not helpers.check_rate(ip):
@@ -170,7 +170,7 @@ def staff_note():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/bridge/close-ticket', methods=['POST'])
+@app.post('/bridge/close-ticket')
 def close_ticket():
     ip = request.remote_addr
     if not helpers.check_rate(ip):
