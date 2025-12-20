@@ -4,9 +4,13 @@ from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit, join_room
 from flask_cors import CORS
 from slack_sdk import WebClient
+from db import insert_project_type
+from dotenv import load_dotenv
+load_dotenv()
 
 USER_CHANNEL = os.getenv("USER_CHANNEL_ID")
 STAFF_CHANNEL = os.getenv("STAFF_CHANNEL_ID")
+API_KEY = os.getenv("API_KEY")
 slack_client = WebClient(token=os.getenv("SLACK_BOT_TOKEN"))
 
 app = Flask(__name__)
@@ -14,7 +18,10 @@ app = Flask(__name__)
 CORS(app, origins="*", supports_credentials=True)
 socketio = SocketIO(app, cors_allowed_origins="*", path='/ws/socket.io', async_mode='threading', engineio_logger=False, logger=False)
 
-
+@app.before_request
+def require_api_key():
+    if request.headers.get("X-API-Key") != API_KEY:
+        return jsonify({"error": "Unauthed"}), 401
 @app.get('/health')
 def health():
     return jsonify({'ok': True, 'bot': 'alive'})
@@ -218,6 +225,22 @@ def close_ticket():
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.post("/bridge/ship_type")
+def ship_type():
+    ip = request.remote_addr
+    if not helpers.check_rate(ip):
+        return jsonify({'error': 'slow down'}), 429
+
+    ship_data = request.json
+    project_name = ship_data.get('projectName')
+    description = ship_data.get('description')
+    repo_url = ship_data.get('repoUrl')
+    readme_url = ship_data.get('readmeUrl')
+    demo_url = ship_data.get('demoUrl')
+    project_type = helpers.get_type(title=project_name, desc=description, readme=helpers.fetch_readme(readme_url=readme_url),demo_url=demo_url, repo_url=repo_url)
+    project_id = ship_data.get("ftProjectId")
+    insert_project_type(project_id, project_type)
 
 
 @socketio.on('join_ticket')

@@ -2,10 +2,15 @@ import os, json, time, requests, tempfile
 import db
 from collections import defaultdict
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
 
 rate_limits = defaultdict(list)
 MAX_REQS = 30
 WINDOW = 60
+
+HACKAI_API = os.getenv('HACKAI_API').split(',')
 
 def check_rate(ip):
     now = datetime.now()
@@ -310,3 +315,74 @@ def show_unauthorized_close(client, body):
             ]
         }
     )
+
+
+def fetch_readme(readme_url):
+    if not readme_url:
+        return ""
+    try:
+        raw_url = readme_url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+        response = requests.get(raw_url, timeout=10)
+        if response.status_code == 200:
+            return response.text
+        elif response.status_code == 404:
+            return "Readme doesn't exist"
+        elif response.status_code == 429:
+            print("Getting rate limited whilst getting readme...")
+            return ""
+        else:
+            print(f"Unknown error code: {response.status_code}")
+            return ""
+    except Exception as e:
+        print(f"Error fetching readme: {e}")
+        return ""
+
+
+
+def get_type(title, desc, readme="", demo_url="", repo_url="", tries=0):
+    AVAILABLE_TYPES = [
+        "CLI", "Cargo", "Web App", "Chat Bot", "Extension",
+        "Desktop App (Windows)", "Desktop App (Linux)", "Desktop App (macOS)",
+        "Minecraft Mods", "Hardware", "Android App", "iOS App", "Other"
+    ]
+
+    response = requests.post(
+        "https://ai.hackclub.com/proxy/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {HACKAI_API[tries]}",
+            "Content-Type": "application/json"
+        },
+        json={
+            "model": "qwen/qwen3-32b",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": f"You are a project classifier. Classify projects into EXACTLY one of these categories: {', '.join(AVAILABLE_TYPES)}. Respond with ONLY valid JSON: {{\"type\": \"category\", \"confidence\": 0.0-1.0}}. No markdown, no explanation, no thinking tags."
+                },
+                {
+                    "role": "user",
+                    "content": f"Title: {title}\nDescription: {desc}\nDemo URL: {demo_url}\nRepo: {repo_url}\n\nREADME:\n{readme}"
+                }
+            ]
+        }
+    )
+
+    try:
+        if response.status_code == 200:
+            content = response.json()["choices"][0]["message"]["content"]
+            content = content.replace("```json", "").replace("```", "").strip()
+            if "<think>" in content:
+                content = content.split("</think>")[-1].strip()
+            result = json.loads(content)
+            return result.get("type", "Unknown") if result.get("confidence", 0) >= 0.8 else "Unknown"
+        elif response.status_code == 429:
+            if tries > 0:
+                print(f"Getting rate limited! Retries: {tries}, Retrying in 10 seconds...")
+                time.sleep(10)
+                return get_type(title, desc, readme, demo_url, repo_url, 0)
+            return get_type(title, desc, readme, demo_url, repo_url, tries + 1)
+        else:
+            print(f"Unknown status code returned by HackClub AI: {response.status_code}")
+    except Exception as e:
+        print(f"Smth went wrong whilst sending request to HackClub AI: {e}\n retrying request...")
+        return get_type(title, desc, readme, demo_url, repo_url, tries + 1)

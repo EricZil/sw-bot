@@ -292,3 +292,22 @@ def edit_message(message_ts, new_text):
         db.rollback()
     finally:
         cursor.close()
+
+def insert_project_type(ft_project_id, project_type):
+    db = get_db()
+    if not db:
+        print("DB seems to be down :/")
+        return
+    cursor = db.cursor()
+    try:
+        cursor.execute(
+            "UPDATE ship_certs SET projectType = %s WHERE ftProjectId = %s",
+            (project_type, ft_project_id)
+        )
+        db.commit()
+    except Exception as e:
+        print(f"Error updating project type: {e}")
+        db.rollback()
+    finally:
+        cursor.close()
+        db.close()
