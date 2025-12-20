@@ -241,6 +241,7 @@ def ship_type():
     project_type = helpers.get_type(title=project_name, desc=description, readme=helpers.fetch_readme(readme_url=readme_url),demo_url=demo_url, repo_url=repo_url)
     project_id = ship_data.get("ftProjectId")
     insert_project_type(project_id, project_type)
+    return jsonify({'ok': True})
 
 
 @socketio.on('join_ticket')
