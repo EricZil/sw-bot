@@ -20,7 +20,7 @@ socketio = SocketIO(app, cors_allowed_origins="*", path='/ws/socket.io', async_m
 
 @app.before_request
 def require_api_key():
-    if request.headers.get("X-API-Key") != API_KEY:
+    if request.headers.get("X-API-Key") != API_KEY and request.path != "/health":
         return jsonify({"error": "Unauthed"}), 401
 @app.get('/health')
 def health():
