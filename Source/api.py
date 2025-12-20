@@ -239,8 +239,11 @@ def ship_type():
     readme_url = ship_data.get('readmeUrl')
     demo_url = ship_data.get('demoUrl')
     project_type = helpers.get_type(title=project_name, desc=description, readme=helpers.fetch_readme(readme_url=readme_url),demo_url=demo_url, repo_url=repo_url)
+    print(f"{project_name}: {project_type}")
     project_id = ship_data.get("ftProjectId")
+    print("attempting to save type...")
     insert_project_type(project_id, project_type)
+    print("saved type.")
     return jsonify({'ok': True})
 
 

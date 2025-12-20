@@ -9,6 +9,11 @@ load_dotenv()
 rate_limits = defaultdict(list)
 MAX_REQS = 30
 WINDOW = 60
+AVAILABLE_TYPES = [
+    "CLI", "Cargo", "Web App", "Chat Bot", "Extension",
+    "Desktop App (Windows)", "Desktop App (Linux)", "Desktop App (macOS)",
+    "Minecraft Mods", "Hardware", "Android App", "iOS App", "Other"
+]
 
 HACKAI_API = os.getenv('HACKAI_API').split(',')
 
@@ -340,12 +345,6 @@ def fetch_readme(readme_url):
 
 
 def get_type(title, desc, readme="", demo_url="", repo_url="", tries=0):
-    AVAILABLE_TYPES = [
-        "CLI", "Cargo", "Web App", "Chat Bot", "Extension",
-        "Desktop App (Windows)", "Desktop App (Linux)", "Desktop App (macOS)",
-        "Minecraft Mods", "Hardware", "Android App", "iOS App", "Other"
-    ]
-
     response = requests.post(
         "https://ai.hackclub.com/proxy/v1/chat/completions",
         headers={
@@ -377,7 +376,7 @@ def get_type(title, desc, readme="", demo_url="", repo_url="", tries=0):
             return result.get("type", "Unknown") if result.get("confidence", 0) >= 0.8 else "Unknown"
         elif response.status_code == 429:
             if tries > 0:
-                print(f"Getting rate limited! Retries: {tries}, Retrying in 10 seconds...")
+                print(f"Getting rate limited! Key: {tries}, Retrying in 10 seconds...")
                 time.sleep(10)
                 return get_type(title, desc, readme, demo_url, repo_url, 0)
             return get_type(title, desc, readme, demo_url, repo_url, tries + 1)
