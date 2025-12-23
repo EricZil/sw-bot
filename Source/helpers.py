@@ -380,6 +380,8 @@ def get_type(title, desc, readme="", demo_url="", repo_url="", tries=0):
                 time.sleep(10)
                 return get_type(title, desc, readme, demo_url, repo_url, 0)
             return get_type(title, desc, readme, demo_url, repo_url, tries + 1)
+        elif response.status_code == 402:
+            print("Looks like Hackclub AI has gone broke :/ Try again later.")
         else:
             print(f"Unknown status code returned by HackClub AI: {response.status_code}")
     except Exception as e:
